@@ -97,6 +97,13 @@ class QuotaTrackerWindow(Gtk.Window):
         self.set_name("quota-tracker-window")
         self.set_app_paintable(True)
 
+        app_icon = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icons", "agents-quota.png")
+        if os.path.exists(app_icon):
+            try:
+                self.set_icon_from_file(app_icon)
+            except Exception:
+                pass
+
         screen = self.get_screen()
         visual = screen.get_rgba_visual()
         if visual and screen.is_composited():

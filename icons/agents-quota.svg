@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#161826" />
+      <stop offset="100%" stop-color="#0b0c14" />
+    </linearGradient>
+
+    <!-- Glowing Outer Border -->
+    <linearGradient id="borderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1" stop-opacity="0.4" />
+      <stop offset="50%" stop-color="#ec4899" stop-opacity="0.2" />
+      <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.4" />
+    </linearGradient>
+
+    <!-- Quota Ring Gradients -->
+    <linearGradient id="ringClaude" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#d946ef" />
+    </linearGradient>
+
+    <linearGradient id="ringAgents" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#06b6d4" />
+      <stop offset="100%" stop-color="#3b82f6" />
+    </linearGradient>
+
+    <!-- Glow Filter -->
+    <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="4" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <filter id="coreGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- App Squircle Canvas -->
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="url(#bgGrad)" stroke="url(#borderGrad)" stroke-width="2.5" />
+
+  <!-- Inner Ambient Glow -->
+  <circle cx="128" cy="128" r="75" fill="#6366f1" opacity="0.08" filter="url(#coreGlow)" />
+
+  <!-- Outer Gauge Track -->
+  <circle cx="128" cy="128" r="82" fill="none" stroke="#25283d" stroke-width="8" stroke-linecap="round" />
+
+  <!-- Outer Progress Ring (Claude / Model Window - ~75%) -->
+  <circle cx="128" cy="128" r="82" fill="none" stroke="url(#ringClaude)" stroke-width="8"
+          stroke-linecap="round" stroke-dasharray="386 515" stroke-dashoffset="-30" filter="url(#softGlow)" />
+
+  <!-- Inner Gauge Track -->
+  <circle cx="128" cy="128" r="62" fill="none" stroke="#1d2033" stroke-width="6.5" stroke-linecap="round" />
+
+  <!-- Inner Progress Ring (Weekly / Token Quota - ~55%) -->
+  <circle cx="128" cy="128" r="62" fill="none" stroke="url(#ringAgents)" stroke-width="6.5"
+          stroke-linecap="round" stroke-dasharray="214 390" stroke-dashoffset="65" />
+
+  <!-- Central Multi-Agent Emblem -->
+  <g transform="translate(128, 128)" filter="url(#softGlow)">
+    <!-- Core Hub -->
+    <circle cx="0" cy="0" r="14" fill="#1e2238" stroke="#818cf8" stroke-width="2.5" />
+    <circle cx="0" cy="0" r="6" fill="#a5b4fc" />
+
+    <!-- Agent Node 1: Top (Claude / Amber) -->
+    <line x1="0" y1="-14" x2="0" y2="-32" stroke="#f59e0b" stroke-width="3" stroke-linecap="round" opacity="0.8" />
+    <circle cx="0" cy="-35" r="7" fill="#f59e0b" />
+    <circle cx="0" cy="-35" r="3" fill="#fef3c7" />
+
+    <!-- Agent Node 2: Bottom-Right (Codex / Cyan) -->
+    <line x1="12" y1="8" x2="28" y2="22" stroke="#06b6d4" stroke-width="3" stroke-linecap="round" opacity="0.8" />
+    <circle cx="31" cy="24" r="7" fill="#06b6d4" />
+    <circle cx="31" cy="24" r="3" fill="#ecfeff" />
+
+    <!-- Agent Node 3: Bottom-Left (Antigravity / Purple) -->
+    <line x1="-12" y1="8" x2="-28" y2="22" stroke="#c084fc" stroke-width="3" stroke-linecap="round" opacity="0.8" />
+    <circle cx="-31" cy="24" r="7" fill="#c084fc" />
+    <circle cx="-31" cy="24" r="3" fill="#faf5ff" />
+  </g>
+</svg>

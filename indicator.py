@@ -26,15 +26,17 @@ class QuotaTrackerTray:
         self.acc_menu_box = []
 
         # Initial placeholder icon
-        init_icon = os.path.join(CACHE_DIR, "tray_strip_a.svg")
+        default_app_icon = os.path.join(APP_DIR, "icons", "agents-quota.png")
+        init_icon = os.path.join(CACHE_DIR, "tray_strip_a.png")
         quota_engine.draw_tray([], init_icon, h=TRAY_H)
 
         # Single tray indicator instance
         self.indicator = AyatanaAppIndicator3.Indicator.new(
-            "claude-quota-tracker-indicator",
-            init_icon,
+            "agents-quota-indicator",
+            init_icon if os.path.exists(init_icon) else default_app_icon,
             AyatanaAppIndicator3.IndicatorCategory.APPLICATION_STATUS
         )
+        self.indicator.set_icon_theme_path(CACHE_DIR)
         self.indicator.set_status(AyatanaAppIndicator3.IndicatorStatus.ACTIVE)
 
         self.build_menu()
@@ -146,9 +148,9 @@ class QuotaTrackerTray:
         # 2. Render whole tray strip (logo + daily/weekly rings + 2-row text) as one image
         self.icon_toggle = not self.icon_toggle
         suffix = "_a" if self.icon_toggle else "_b"  # alternate filename to force GNOME icon reload
-        icon_file = os.path.join(CACHE_DIR, f"tray_strip{suffix}.svg")
-        quota_engine.draw_tray(quota_engine.tray_segments(data), icon_file, h=TRAY_H)
-        self.indicator.set_icon_full(icon_file, "Quota Tracker")
+        icon_file = os.path.join(CACHE_DIR, f"tray_strip{suffix}.png")
+        png_out = quota_engine.draw_tray(quota_engine.tray_segments(data), icon_file, h=TRAY_H)
+        self.indicator.set_icon_full(png_out, "Agents Quota")
 
         if self.card_window and self.card_window.get_visible():
             # Reuse fetched data; refresh_view() would call back into update_tray_data (infinite loop)

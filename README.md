@@ -1,6 +1,6 @@
 # Agents Quota
 
-A lightweight system tray indicator and popup widget for tracking AI coding agent quotas (Claude Code, Antigravity, OpenAI Codex, 9Router) on Linux / GNOME and any AppIndicator-compatible desktop.
+A lightweight desktop application and system tray indicator for tracking AI coding agent quotas (Claude Code, Antigravity, OpenAI Codex, 9Router) on Linux / Ubuntu GNOME and any AppIndicator-compatible desktop.
 
 ---
 
@@ -36,6 +36,7 @@ A lightweight system tray indicator and popup widget for tracking AI coding agen
 
 ## Features
 
+- **Ubuntu Desktop Application**: Shows up in "Show Applications", searchable via Super key, and pinnable to the Ubuntu Dock.
 - **Dynamic Tray Indicator**: Real-time rings and compact percentage / countdown counters rendered directly into the system panel.
 - **Visual Badges**: Distinguishes multiple instances of the same provider (e.g. `D` for Dev, `S` for Staging).
 - **Popup Mini-Card**: Modern dark liquid-glass card showing detailed progress bars, percentage remaining, and exact reset timers.
@@ -65,8 +66,17 @@ sudo pacman -S python python-gobject python-cairo gtk3 libayatana-appindicator
 
 ---
 
-## Installation & Setup
+## Installation
 
+### Automated Setup (Recommended)
+Run the install script to automatically configure icons, app launcher, and autostart:
+```bash
+git clone https://github.com/fayaadbsa/agents-quota.git ~/programming/agents-quota
+cd ~/programming/agents-quota
+./install.sh
+```
+
+### Manual Setup
 1. **Clone the repository**:
    ```bash
    git clone https://github.com/fayaadbsa/agents-quota.git ~/programming/agents-quota
@@ -78,13 +88,20 @@ sudo pacman -S python python-gobject python-cairo gtk3 libayatana-appindicator
    python3 indicator.py &
    ```
 
-3. **Toggle Details Popup via Shortcut**:
-   You can bind `toggle.sh` to a GNOME custom keyboard shortcut (e.g. `Super + U`):
+3. **Install Desktop App Entry**:
+   Copy or link the desktop file:
    ```bash
-   /path/to/agents-quota/toggle.sh
+   cp ~/.local/share/applications/agents-quota.desktop
+   ```
+   Now search for **"Agents Quota"** in your Ubuntu applications or pin it to the Dock.
+
+4. **Toggle Details Popup via Shortcut**:
+   You can bind `launch.sh` or `toggle.sh` to a GNOME custom keyboard shortcut (e.g. `Super + U`):
+   ```bash
+   ~/programming/agents-quota/launch.sh
    ```
 
-4. **Autostart on Login**:
+5. **Autostart on Login**:
    Create `~/.config/autostart/agents-quota.desktop`:
    ```ini
    [Desktop Entry]
@@ -92,9 +109,9 @@ sudo pacman -S python python-gobject python-cairo gtk3 libayatana-appindicator
    Name=Agents Quota
    Comment=AI agents quota and limits indicator in tray
    Exec=python3 /home/YOUR_USER/programming/agents-quota/indicator.py
-   Icon=/home/YOUR_USER/programming/agents-quota/icons/claude.png
+   Icon=agents-quota
    Terminal=false
-   Categories=Utility;System;
+   Categories=Utility;Development;
    StartupNotify=false
    X-GNOME-Autostart-enabled=true
    ```

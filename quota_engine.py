@@ -273,10 +273,36 @@ def tray_segments(data):
 
 
 def draw_tray(segments, filename, h=32):
-    """Render the whole tray strip: [logo] [outer ring=daily, inner ring=weekly] [pct time / pct time] per account."""
+    """Render the whole tray strip: [logo] [outer ring=daily, inner ring=weekly] [pct time / pct time] per account.
+    Generates both .png and .svg outputs and returns the .png path.
+    """
     gi.require_version("Pango", "1.0")
     gi.require_version("PangoCairo", "1.0")
     from gi.repository import Pango, PangoCairo
+
+    base = filename.rsplit(".", 1)[0]
+    png_file = f"{base}.png"
+    svg_file = f"{base}.svg"
+    os.makedirs(os.path.dirname(os.path.abspath(filename)), exist_ok=True)
+
+    if not segments:
+        w = int(h * 1.5)
+        app_icon = os.path.join(ICONS_DIR, "agents-quota.png")
+        for fpath, is_svg in [(png_file, False), (svg_file, True)]:
+            surf = cairo.SVGSurface(fpath, w, h) if is_svg else cairo.ImageSurface(cairo.FORMAT_ARGB32, w, h)
+            c = cairo.Context(surf)
+            if os.path.exists(app_icon):
+                img = cairo.ImageSurface.create_from_png(app_icon)
+                k = (h * 0.8) / img.get_height()
+                c.translate((w - img.get_width() * k) / 2, (h - img.get_height() * k) / 2)
+                c.scale(k, k)
+                c.set_source_surface(img, 0, 0)
+                c.paint()
+            if is_svg:
+                surf.finish()
+            else:
+                surf.write_to_png(fpath)
+        return png_file
 
     ring_d, logo_d, gap, seg_gap, col_gap = h * 0.75, h * 0.56, 5, 12, 4
     ring_w = 3.0
@@ -287,7 +313,6 @@ def draw_tray(segments, filename, h=32):
         lo.set_markup(f'<span font_features="tnum">{text}</span>', -1)
         return lo, lo.get_pixel_size()
 
-    # Measure pass: widest pct / time text per segment so both rows align in columns
     probe = cairo.Context(cairo.ImageSurface(cairo.FORMAT_ARGB32, 1, 1))
     plans = []
     for s in segments:
@@ -296,100 +321,103 @@ def draw_tray(segments, filename, h=32):
         text_w = pct_w + (col_gap + time_w if time_w else 0)
         plans.append((pct_w, text_w))
     total_w = sum(logo_d + gap + ring_d + gap + tw for _, tw in plans) + seg_gap * max(0, len(plans) - 1)
-    # >= 1.5*h keeps appindicator from squashing it into a square icon slot
     w = max(int(math.ceil(total_w)), int(h * 1.5) + 1)
 
-    # SVG, not PNG: appindicator rasterizes it at the panel's real scale (125% here) -> no upscale blur
-    os.makedirs(os.path.dirname(os.path.abspath(filename)), exist_ok=True)
-    surface = cairo.SVGSurface(filename, w, h)
-    ctx = cairo.Context(surface)
-    cy = h / 2.0
-    x = 0.0
-    for s, (pct_w, text_w) in zip(segments, plans):
-        # Logo (fallback: slug text)
-        logo = PROVIDER_LOGOS.get(s["provider"])
-        if logo and os.path.exists(logo):
-            img = cairo.ImageSurface.create_from_png(logo)
-            k = logo_d / img.get_height()
-            ctx.save()
-            ctx.translate(x, cy - logo_d / 2)
-            ctx.scale(k, k)
-            ctx.set_source_surface(img, 0, 0)
-            ctx.get_source().set_filter(cairo.FILTER_BEST)
-            ctx.paint()
-            ctx.restore()
+    def render_content(ctx):
+        cy = h / 2.0
+        x = 0.0
+        for s, (pct_w, text_w) in zip(segments, plans):
+            logo = PROVIDER_LOGOS.get(s["provider"])
+            if logo and os.path.exists(logo):
+                img = cairo.ImageSurface.create_from_png(logo)
+                k = logo_d / img.get_height()
+                ctx.save()
+                ctx.translate(x, cy - logo_d / 2)
+                ctx.scale(k, k)
+                ctx.set_source_surface(img, 0, 0)
+                ctx.get_source().set_filter(cairo.FILTER_BEST)
+                ctx.paint()
+                ctx.restore()
 
-            tag = s.get("tag")
-            if not tag and s.get("provider") == "claude":
-                sname = (s.get("name") or s.get("slug") or "").lower()
-                if "dev" in sname:
-                    tag = "D"
-                elif "stag" in sname:
-                    tag = "S"
+                tag = s.get("tag")
+                if not tag and s.get("provider") == "claude":
+                    sname = (s.get("name") or s.get("slug") or "").lower()
+                    if "dev" in sname:
+                        tag = "D"
+                    elif "stag" in sname:
+                        tag = "S"
 
-            if tag:
-                badge_r = 4.5
-                bx = x + logo_d - badge_r + 1
-                by = cy + logo_d / 2 - badge_r + 1
+                if tag:
+                    badge_r = 4.5
+                    bx = x + logo_d - badge_r + 1
+                    by = cy + logo_d / 2 - badge_r + 1
+                    ctx.new_path()
+                    ctx.set_source_rgba(0.07, 0.07, 0.11, 1.0)
+                    ctx.arc(bx, by, badge_r + 1.2, 0, 2 * math.pi)
+                    ctx.fill()
+                    ctx.new_path()
+                    if str(tag).lower().startswith("d"):
+                        ctx.set_source_rgb(0.96, 0.62, 0.04)
+                    else:
+                        ctx.set_source_rgb(0.65, 0.52, 0.98)
+                    ctx.arc(bx, by, badge_r, 0, 2 * math.pi)
+                    ctx.fill()
+
+                    tlo = PangoCairo.create_layout(ctx)
+                    tlo.set_font_description(Pango.FontDescription.from_string("Ubuntu Sans Bold 6"))
+                    tlo.set_markup(f'<span font_features="tnum">{str(tag)[0].upper()}</span>', -1)
+                    tw, th = tlo.get_pixel_size()
+                    ctx.set_source_rgb(1, 1, 1)
+                    ctx.move_to(bx - tw / 2.0, by - th / 2.0)
+                    PangoCairo.show_layout(ctx, tlo)
+            else:
+                lo, (lw, lh) = layout(ctx, s["slug"])
+                ctx.set_source_rgba(1, 1, 1, 0.9)
+                ctx.move_to(x + (logo_d - lw) / 2, cy - lh / 2)
+                PangoCairo.show_layout(ctx, lo)
+            x += logo_d + gap
+
+            cx = x + ring_d / 2
+            radii = [ring_d / 2 - ring_w / 2, ring_d / 2 - ring_w * 2.2]
+            ctx.set_line_width(ring_w)
+            ctx.set_line_cap(cairo.LINE_CAP_ROUND)
+            for (pct, _), r in zip(s["rows"], radii):
                 ctx.new_path()
-                ctx.set_source_rgba(0.07, 0.07, 0.11, 1.0)
-                ctx.arc(bx, by, badge_r + 1.2, 0, 2 * math.pi)
-                ctx.fill()
-                ctx.new_path()
-                if str(tag).lower().startswith("d"):
-                    ctx.set_source_rgb(0.96, 0.62, 0.04)  # amber for dev
-                else:
-                    ctx.set_source_rgb(0.65, 0.52, 0.98)  # purple for stag
-                ctx.arc(bx, by, badge_r, 0, 2 * math.pi)
-                ctx.fill()
-
-                tlo = PangoCairo.create_layout(ctx)
-                tlo.set_font_description(Pango.FontDescription.from_string("Ubuntu Sans Bold 6"))
-                tlo.set_markup(f'<span font_features="tnum">{str(tag)[0].upper()}</span>', -1)
-                tw, th = tlo.get_pixel_size()
-                ctx.set_source_rgb(1, 1, 1)
-                ctx.move_to(bx - tw / 2.0, by - th / 2.0)
-                PangoCairo.show_layout(ctx, tlo)
-        else:
-            lo, (lw, lh) = layout(ctx, s["slug"])
-            ctx.set_source_rgba(1, 1, 1, 0.9)
-            ctx.move_to(x + (logo_d - lw) / 2, cy - lh / 2)
-            PangoCairo.show_layout(ctx, lo)
-        x += logo_d + gap
-
-        # Rings: outer = daily, inner = weekly
-        cx = x + ring_d / 2
-        radii = [ring_d / 2 - ring_w / 2, ring_d / 2 - ring_w * 2.2]
-        ctx.set_line_width(ring_w)
-        ctx.set_line_cap(cairo.LINE_CAP_ROUND)
-        for (pct, _), r in zip(s["rows"], radii):
-            ctx.new_path()
-            ctx.set_source_rgba(1, 1, 1, 0.14)
-            ctx.arc(cx, cy, r, 0, 2 * math.pi)
-            ctx.stroke()
-            if pct is not None and pct > 0:
-                ctx.new_path()
-                ctx.set_source_rgb(*_level_rgb(pct))
-                ctx.arc(cx, cy, r, -math.pi / 2, -math.pi / 2 + 2 * math.pi * min(pct, 100) / 100)
+                ctx.set_source_rgba(1, 1, 1, 0.14)
+                ctx.arc(cx, cy, r, 0, 2 * math.pi)
                 ctx.stroke()
-        x += ring_d + gap
+                if pct is not None and pct > 0:
+                    ctx.new_path()
+                    ctx.set_source_rgb(*_level_rgb(pct))
+                    ctx.arc(cx, cy, r, -math.pi / 2, -math.pi / 2 + 2 * math.pi * min(pct, 100) / 100)
+                    ctx.stroke()
+            x += ring_d + gap
 
-        # Text rows: right-aligned pct column, dimmer time column
-        lines = [layout(ctx, _pct_text(p)) + (layout(ctx, t) if t else (None, (0, 0))) for p, t in s["rows"]]
-        line_h = max(sz[1] for _, sz, *_ in lines)
-        top = cy - line_h * len(lines) / 2
-        for i, (plo, (pw, _), tlo, _) in enumerate(lines):
-            y = top + i * line_h
-            ctx.set_source_rgba(1, 1, 1, 0.95)
-            ctx.move_to(x + pct_w - pw, y)
-            PangoCairo.show_layout(ctx, plo)
-            if tlo:
-                ctx.set_source_rgba(1, 1, 1, 0.6)
-                ctx.move_to(x + pct_w + col_gap, y)
-                PangoCairo.show_layout(ctx, tlo)
-        x += text_w + seg_gap
+            lines = [layout(ctx, _pct_text(p)) + (layout(ctx, t) if t else (None, (0, 0))) for p, t in s["rows"]]
+            line_h = max(sz[1] for _, sz, *_ in lines)
+            top = cy - line_h * len(lines) / 2
+            for i, (plo, (pw, _), tlo, _) in enumerate(lines):
+                y = top + i * line_h
+                ctx.set_source_rgba(1, 1, 1, 0.95)
+                ctx.move_to(x + pct_w - pw, y)
+                PangoCairo.show_layout(ctx, plo)
+                if tlo:
+                    ctx.set_source_rgba(1, 1, 1, 0.6)
+                    ctx.move_to(x + pct_w + col_gap, y)
+                    PangoCairo.show_layout(ctx, tlo)
+            x += text_w + seg_gap
 
-    surface.finish()
+    # Render PNG
+    img_surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, w, h)
+    render_content(cairo.Context(img_surf))
+    img_surf.write_to_png(png_file)
+
+    # Render SVG
+    svg_surf = cairo.SVGSurface(svg_file, w, h)
+    render_content(cairo.Context(svg_surf))
+    svg_surf.finish()
+
+    return png_file
 
 
 def get_quota_color_circle(pct_left):
